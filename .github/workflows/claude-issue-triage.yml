@@ -1,0 +1,60 @@
+name: Claude Issue Triage
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  triage:
+    # Solo el issue principal (no comentarios) y sólo si no lo editó el propio bot,
+    # para evitar que el workflow se dispare a sí mismo al comentar/etiquetar.
+    if: github.event.sender.type != 'Bot'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Run Claude Issue Triage
+        id: claude-triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Bash(gh issue edit:*),Bash(gh issue comment:*),Bash(gh label list:*),Bash(gh issue view:*)"'
+          prompt: |
+            Estás analizando el issue #${{ github.event.issue.number }} del repositorio ${{ github.repository }}.
+
+            Contexto del repo: es un Tetris en JavaScript vanilla + Canvas 2D (ver CLAUDE.md para arquitectura).
+
+            Pasos a seguir:
+            1. Lee el título y el cuerpo del issue con `gh issue view ${{ github.event.issue.number }} --repo ${{ github.repository }}`.
+            2. Revisa las labels disponibles con `gh label list --repo ${{ github.repository }}` y elige las que apliquen
+               (por ejemplo: bug, enhancement, documentation, question, accessibility, duplicate, invalid, help wanted,
+               good first issue). No crees labels nuevas; usa únicamente las existentes. Si ya tiene labels correctas, no las dupliques.
+            3. Aplica las labels elegidas con `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "..."`.
+            4. Publica UN comentario en el issue (`gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "..."`)
+               con un diagnóstico general en español, en este formato:
+
+               ## Diagnóstico automático
+
+               **Tipo de problema:** (bug / mejora / pregunta / documentación / accesibilidad / etc.)
+
+               **Resumen:** 2-3 líneas explicando qué está pasando o qué se pide, en tus propias palabras.
+
+               **Área del código afectada:** qué archivo(s) y función(es) de `game.js`/`index.html`/`style.css`
+               probablemente están involucrados, basándote en la arquitectura descrita en CLAUDE.md.
+
+               **Posibles causas / enfoque de solución:** hipótesis concretas sobre la causa raíz o el enfoque de
+               implementación, para que sirvan de punto de partida cuando se escriba el código de la solución
+               (sin escribir el código todavía, sólo el análisis).
+
+               **Información faltante:** si el issue no da suficiente detalle para diagnosticar (pasos de
+               reproducción, navegador, capturas, etc.), pídelo aquí.
+
+            No hagas ningún otro cambio en el repositorio (no edites código, no abras PRs). Sólo labels y el comentario de diagnóstico.
