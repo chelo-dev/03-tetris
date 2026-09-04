@@ -39,22 +39,39 @@ jobs:
                good first issue). No crees labels nuevas; usa únicamente las existentes. Si ya tiene labels correctas, no las dupliques.
             3. Aplica las labels elegidas con `gh issue edit ${{ github.event.issue.number }} --repo ${{ github.repository }} --add-label "..."`.
             4. Publica UN comentario en el issue (`gh issue comment ${{ github.event.issue.number }} --repo ${{ github.repository }} --body "..."`)
-               con un diagnóstico general en español, en este formato:
+               con un diagnóstico general en español. El cuerpo del comentario DEBE ser Markdown válido que GitHub
+               pueda renderizar correctamente (GitHub Flavored Markdown): usa encabezados con `##`, texto en negrita
+               con `**...**`, y deja una línea en blanco entre cada sección y antes/después de cada encabezado (en
+               Markdown un solo salto de línea no crea un párrafo/línea nueva separado). Si necesitas listar varios
+               puntos, usa una lista con `-` en líneas propias, no los mezcles en un solo párrafo. Sigue exactamente
+               esta estructura:
 
                ## Diagnóstico automático
 
                **Tipo de problema:** (bug / mejora / pregunta / documentación / accesibilidad / etc.)
 
-               **Resumen:** 2-3 líneas explicando qué está pasando o qué se pide, en tus propias palabras.
+               **Resumen:**
 
-               **Área del código afectada:** qué archivo(s) y función(es) de `game.js`/`index.html`/`style.css`
-               probablemente están involucrados, basándote en la arquitectura descrita en CLAUDE.md.
+               2-3 líneas explicando qué está pasando o qué se pide, en tus propias palabras.
 
-               **Posibles causas / enfoque de solución:** hipótesis concretas sobre la causa raíz o el enfoque de
-               implementación, para que sirvan de punto de partida cuando se escriba el código de la solución
-               (sin escribir el código todavía, sólo el análisis).
+               **Área del código afectada:**
 
-               **Información faltante:** si el issue no da suficiente detalle para diagnosticar (pasos de
-               reproducción, navegador, capturas, etc.), pídelo aquí.
+               Qué archivo(s) y función(es) de `game.js`/`index.html`/`style.css` probablemente están involucrados,
+               basándote en la arquitectura descrita en CLAUDE.md. Si mencionas nombres de función o archivo, usa
+               comillas invertidas (`` `nombre` ``) para que se muestren como código.
+
+               **Posibles causas / enfoque de solución:**
+
+               Hipótesis concretas sobre la causa raíz o el enfoque de implementación, para que sirvan de punto de
+               partida cuando se escriba el código de la solución (sin escribir el código todavía, sólo el análisis).
+               Si son varias hipótesis, preséntalas como lista con `-`.
+
+               **Información faltante:**
+
+               Si el issue no da suficiente detalle para diagnosticar (pasos de reproducción, navegador, capturas,
+               etc.), pídelo aquí como lista con `-`. Si no falta información, escribe "Ninguna".
+
+               Antes de publicar el comentario, revisa que el texto no tenga saltos de línea rotos a mitad de
+               oración ni caracteres que rompan el Markdown (comillas dobles sin escapar dentro del `--body`, etc.).
 
             No hagas ningún otro cambio en el repositorio (no edites código, no abras PRs). Sólo labels y el comentario de diagnóstico.
