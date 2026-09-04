@@ -39,8 +39,13 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const themeSwitch = document.getElementById('theme-switch');
+const curtain = document.getElementById('curtain');
+
+const THEME_KEY = 'tetris-theme';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let gridColor = '#22222e';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -169,7 +174,7 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
 }
 
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -274,6 +279,33 @@ function init() {
   animId = requestAnimationFrame(loop);
 }
 
+function applyTheme(light) {
+  document.body.classList.toggle('light', light);
+  gridColor = getComputedStyle(document.body).getPropertyValue('--grid-color').trim();
+  themeSwitch.checked = light;
+  localStorage.setItem(THEME_KEY, light ? 'light' : 'dark');
+}
+
+function toggleTheme() {
+  themeSwitch.disabled = true;
+  curtain.classList.add('active');
+  curtain.addEventListener('transitionend', function onCovered() {
+    curtain.removeEventListener('transitionend', onCovered);
+    applyTheme(!document.body.classList.contains('light'));
+    requestAnimationFrame(() => curtain.classList.remove('active'));
+    curtain.addEventListener('transitionend', function onRevealed() {
+      curtain.removeEventListener('transitionend', onRevealed);
+      themeSwitch.disabled = false;
+    });
+  });
+}
+
+function initTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  applyTheme(saved === 'light');
+  themeSwitch.addEventListener('change', toggleTheme);
+}
+
 document.addEventListener('keydown', e => {
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
@@ -301,4 +333,5 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+initTheme();
 init();

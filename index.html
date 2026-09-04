@@ -7,7 +7,16 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div id="curtain"></div>
   <div class="wrapper">
+    <label class="theme-toggle" for="theme-switch" title="Cambiar tema claro/oscuro">
+      <input type="checkbox" id="theme-switch" />
+      <span class="toggle-track">
+        <span class="toggle-icon toggle-icon-moon">🌙</span>
+        <span class="toggle-icon toggle-icon-sun">☀️</span>
+        <span class="toggle-thumb"></span>
+      </span>
+    </label>
     <h1 class="game-title">TETRIS</h1>
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>
