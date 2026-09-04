@@ -31,6 +31,10 @@ const PIECES = [
 const PIECE_COUNT = PIECES.length - 1;
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+const TSPIN_SCORES = [400, 800, 1200, 1600]; // 0..3 líneas
+const PERFECT_CLEAR_BONUS = 2000;
+const B2B_MULT = 1.5;
+const POPUP_LIFE = 1200;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -39,6 +43,7 @@ const nextCtx = nextCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
+const comboEl = document.getElementById('combo');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
@@ -49,7 +54,9 @@ const curtain = document.getElementById('curtain');
 const THEME_KEY = 'tetris-theme';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let combo, b2b, lastMoveRotation, popups;
 let gridColor = '#22222e';
+let accentColor = '#7aa2f7';
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -90,9 +97,25 @@ function tryRotate() {
     if (!collide(rotated, current.x + kick, current.y)) {
       current.shape = rotated;
       current.x += kick;
+      lastMoveRotation = true;
       return;
     }
   }
+}
+
+function isTSpin() {
+  if (current.type !== 3 || !lastMoveRotation) return false;
+  const corners = [
+    [current.x, current.y],
+    [current.x + 2, current.y],
+    [current.x, current.y + 2],
+    [current.x + 2, current.y + 2],
+  ];
+  let occupied = 0;
+  for (const [cx, cy] of corners) {
+    if (cx < 0 || cx >= COLS || cy >= ROWS || (cy >= 0 && board[cy][cx])) occupied++;
+  }
+  return occupied >= 3;
 }
 
 function merge() {
@@ -112,13 +135,59 @@ function clearLines() {
       r++;
     }
   }
-  if (cleared) {
-    lines += cleared;
-    score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
-    updateHUD();
+  return cleared;
+}
+
+function isBoardEmpty() {
+  return board.every(row => row.every(v => v === 0));
+}
+
+function pushPopup(text) {
+  popups.push({ text, life: POPUP_LIFE });
+  canvas.classList.remove('combo-flash');
+  void canvas.offsetWidth; // reinicia la animación si ya estaba corriendo
+  canvas.classList.add('combo-flash');
+}
+
+function applyScore(cleared, tspin) {
+  if (cleared === 0) {
+    combo = 0;
+    if (tspin) {
+      score += Math.round(TSPIN_SCORES[0] * level);
+      pushPopup('T-SPIN');
+      updateHUD();
+    }
+    return;
   }
+
+  let base = tspin ? TSPIN_SCORES[cleared] : LINE_SCORES[cleared];
+  const difficult = tspin || cleared === 4;
+
+  if (difficult && b2b) {
+    base *= B2B_MULT;
+    pushPopup('B2B');
+  }
+
+  combo++;
+  if (combo >= 2) {
+    base *= combo;
+    pushPopup(`COMBO x${combo}`);
+  }
+
+  if (tspin) pushPopup('T-SPIN');
+
+  if (isBoardEmpty()) {
+    base += PERFECT_CLEAR_BONUS * level;
+    pushPopup('PERFECT CLEAR');
+  }
+
+  b2b = difficult;
+
+  score += Math.round(base * level);
+  lines += cleared;
+  level = Math.floor(lines / 10) + 1;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  updateHUD();
 }
 
 function ghostY() {
@@ -137,6 +206,7 @@ function hardDrop() {
 function softDrop() {
   if (!collide(current.shape, current.x, current.y + 1)) {
     current.y++;
+    lastMoveRotation = false;
     score += 1;
     updateHUD();
   } else {
@@ -145,8 +215,11 @@ function softDrop() {
 }
 
 function lockPiece() {
+  const tspin = isTSpin();
   merge();
-  clearLines();
+  const cleared = clearLines();
+  applyScore(cleared, tspin);
+  lastMoveRotation = false;
   spawn();
 }
 
@@ -163,6 +236,7 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  comboEl.textContent = combo >= 2 ? `x${combo}` : '–';
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -214,6 +288,25 @@ function draw() {
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
       drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+
+  drawPopups();
+}
+
+function drawPopups() {
+  if (!popups.length) return;
+  ctx.save();
+  ctx.textAlign = 'center';
+  ctx.font = '700 20px system-ui, sans-serif';
+  const cx = canvas.width / 2;
+  const baseY = canvas.height / 2;
+  popups.forEach((p, i) => {
+    const t = p.life / POPUP_LIFE;
+    const rise = (1 - t) * 30;
+    ctx.globalAlpha = Math.max(0, t);
+    ctx.fillStyle = accentColor;
+    ctx.fillText(p.text, cx, baseY + i * 26 - rise);
+  });
+  ctx.restore();
 }
 
 function drawNext() {
@@ -252,6 +345,10 @@ function togglePause() {
 function loop(ts) {
   const dt = ts - lastTime;
   lastTime = ts;
+  if (popups.length) {
+    popups.forEach(p => p.life -= dt);
+    popups = popups.filter(p => p.life > 0);
+  }
   dropAccum += dt;
   if (dropAccum >= dropInterval) {
     dropAccum = 0;
@@ -275,6 +372,10 @@ function init() {
   gameOver = false;
   dropInterval = 1000;
   dropAccum = 0;
+  combo = 0;
+  b2b = false;
+  lastMoveRotation = false;
+  popups = [];
   lastTime = performance.now();
   next = randomPiece();
   spawn();
@@ -286,7 +387,9 @@ function init() {
 
 function applyTheme(light) {
   document.body.classList.toggle('light', light);
-  gridColor = getComputedStyle(document.body).getPropertyValue('--grid-color').trim();
+  const style = getComputedStyle(document.body);
+  gridColor = style.getPropertyValue('--grid-color').trim();
+  accentColor = style.getPropertyValue('--accent').trim();
   themeSwitch.checked = light;
   localStorage.setItem(THEME_KEY, light ? 'light' : 'dark');
 }
@@ -316,10 +419,10 @@ document.addEventListener('keydown', e => {
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
-      if (!collide(current.shape, current.x - 1, current.y)) current.x--;
+      if (!collide(current.shape, current.x - 1, current.y)) { current.x--; lastMoveRotation = false; }
       break;
     case 'ArrowRight':
-      if (!collide(current.shape, current.x + 1, current.y)) current.x++;
+      if (!collide(current.shape, current.x + 1, current.y)) { current.x++; lastMoveRotation = false; }
       break;
     case 'ArrowDown':
       softDrop();

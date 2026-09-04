@@ -152,6 +152,16 @@ body {
   box-shadow: 0 0 40px rgba(0, 0, 0, 0.6);
 }
 
+#board.combo-flash {
+  animation: combo-flash 0.4s ease-out;
+}
+
+@keyframes combo-flash {
+  0% { box-shadow: 0 0 0 rgba(0, 0, 0, 0); border-color: var(--accent); }
+  30% { box-shadow: 0 0 24px 4px var(--accent); border-color: var(--accent); }
+  100% { box-shadow: 0 0 40px rgba(0, 0, 0, 0.6); border-color: var(--board-border); }
+}
+
 /* ---- Panel lateral ---- */
 .panel {
   width: 160px;
