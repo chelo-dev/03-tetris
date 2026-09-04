@@ -36,6 +36,46 @@ const PERFECT_CLEAR_BONUS = 2000;
 const B2B_MULT = 1.5;
 const POPUP_LIFE = 1200;
 
+// ---- Modo desafío: campaña de 5 niveles con objetivos y reglas propias ----
+const CHALLENGES = [
+  {
+    id: 'sprint40',
+    title: 'Sprint 40',
+    goalText: '40 líneas en 2:00',
+    goalLines: 40,
+    timeLimit: 120000,
+  },
+  {
+    id: 'garbage',
+    title: 'Basura ascendente',
+    goalText: 'Sobrevive 90 s con basura subiendo cada 10 s',
+    goalTime: 90000,
+    garbageEvery: 10000,
+  },
+  {
+    id: 'preset',
+    title: 'Terreno minado',
+    goalText: '12 líneas con bloques pre-colocados',
+    goalLines: 12,
+    presetRows: 8,
+  },
+  {
+    id: 'blind',
+    title: 'A ciegas',
+    goalText: '10 líneas: las piezas fijas se vuelven invisibles',
+    goalLines: 10,
+    hideLocked: true,
+  },
+  {
+    id: 'inverted',
+    title: 'Espejo',
+    goalText: '20 líneas, rotación invertida desde el nivel 3',
+    goalLines: 20,
+    invertRotationFrom: 3,
+  },
+];
+const PROGRESS_KEY = 'tetris-challenges';
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -44,10 +84,18 @@ const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
 const comboEl = document.getElementById('combo');
+const challengeHud = document.getElementById('challenge-hud');
+const objectiveEl = document.getElementById('objective');
+const timerEl = document.getElementById('timer');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
+const nextBtn = document.getElementById('next-btn');
+const menuBtn = document.getElementById('menu-btn');
+const menuEl = document.getElementById('menu');
+const challengeListEl = document.getElementById('challenge-list');
+const classicBtn = document.getElementById('classic-btn');
 const themeSwitch = document.getElementById('theme-switch');
 const curtain = document.getElementById('curtain');
 
@@ -55,6 +103,7 @@ const THEME_KEY = 'tetris-theme';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let combo, b2b, lastMoveRotation, popups;
+let challenge, elapsed, garbageAccum, revealUntil;
 let gridColor = '#22222e';
 let accentColor = '#7aa2f7';
 
@@ -90,8 +139,18 @@ function rotateCW(shape) {
   return result;
 }
 
+function rotateCCW(shape) {
+  const rows = shape.length, cols = shape[0].length;
+  const result = Array.from({ length: cols }, () => new Array(rows).fill(0));
+  for (let r = 0; r < rows; r++)
+    for (let c = 0; c < cols; c++)
+      result[cols - 1 - c][r] = shape[r][c];
+  return result;
+}
+
 function tryRotate() {
-  const rotated = rotateCW(current.shape);
+  const inverted = challenge && challenge.invertRotationFrom && level >= challenge.invertRotationFrom;
+  const rotated = inverted ? rotateCCW(current.shape) : rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
     if (!collide(rotated, current.x + kick, current.y)) {
@@ -188,6 +247,10 @@ function applyScore(cleared, tspin) {
   level = Math.floor(lines / 10) + 1;
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   updateHUD();
+
+  if (challenge && challenge.goalLines && lines >= challenge.goalLines) {
+    finishChallenge(true);
+  }
 }
 
 function ghostY() {
@@ -217,8 +280,10 @@ function softDrop() {
 function lockPiece() {
   const tspin = isTSpin();
   merge();
+  if (challenge && challenge.hideLocked) revealUntil = performance.now() + 600;
   const cleared = clearLines();
   applyScore(cleared, tspin);
+  if (gameOver) return;
   lastMoveRotation = false;
   spawn();
 }
@@ -232,11 +297,32 @@ function spawn() {
   drawNext();
 }
 
+function formatTime(ms) {
+  const s = Math.ceil(ms / 1000);
+  const m = Math.floor(s / 60);
+  const sec = s % 60;
+  return `${m}:${String(sec).padStart(2, '0')}`;
+}
+
+function updateChallengeTimerText() {
+  if (!challenge) return;
+  if (challenge.timeLimit) timerEl.textContent = formatTime(Math.max(0, challenge.timeLimit - elapsed));
+  else if (challenge.goalTime) timerEl.textContent = formatTime(Math.max(0, challenge.goalTime - elapsed));
+  else timerEl.textContent = '';
+}
+
 function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
   comboEl.textContent = combo >= 2 ? `x${combo}` : '–';
+  challengeHud.classList.toggle('hidden', !challenge);
+  if (challenge) {
+    objectiveEl.textContent = challenge.goalLines
+      ? `${lines}/${challenge.goalLines} líneas`
+      : `Sobrevive ${formatTime(challenge.goalTime)}`;
+    updateChallengeTimerText();
+  }
 }
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
@@ -272,10 +358,13 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawGrid();
 
-  // board
-  for (let r = 0; r < ROWS; r++)
-    for (let c = 0; c < COLS; c++)
-      drawBlock(ctx, c, r, board[r][c], BLOCK);
+  // board (oculto en el desafío "A ciegas" salvo el destello tras cada pieza)
+  const showLocked = !(challenge && challenge.hideLocked) || performance.now() <= revealUntil;
+  if (showLocked) {
+    for (let r = 0; r < ROWS; r++)
+      for (let c = 0; c < COLS; c++)
+        drawBlock(ctx, c, r, board[r][c], BLOCK);
+  }
 
   // ghost
   const gy = ghostY();
@@ -321,10 +410,12 @@ function drawNext() {
 }
 
 function endGame() {
+  if (challenge) { finishChallenge(false); return; }
   gameOver = true;
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  nextBtn.classList.add('hidden');
   overlay.classList.remove('hidden');
 }
 
@@ -332,12 +423,14 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
+    nextBtn.classList.add('hidden');
     overlay.classList.remove('hidden');
   }
 }
@@ -349,6 +442,8 @@ function loop(ts) {
     popups.forEach(p => p.life -= dt);
     popups = popups.filter(p => p.life > 0);
   }
+  updateChallenge(dt);
+  if (gameOver) return;
   dropAccum += dt;
   if (dropAccum >= dropInterval) {
     dropAccum = 0;
@@ -363,8 +458,9 @@ function loop(ts) {
   animId = requestAnimationFrame(loop);
 }
 
-function init() {
-  board = createBoard();
+function init(ch = null) {
+  challenge = ch;
+  board = challenge && challenge.presetRows ? buildPresetRows(challenge.presetRows) : createBoard();
   score = 0;
   lines = 0;
   level = 1;
@@ -376,11 +472,15 @@ function init() {
   b2b = false;
   lastMoveRotation = false;
   popups = [];
+  elapsed = 0;
+  garbageAccum = 0;
+  revealUntil = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  menuEl.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -408,6 +508,117 @@ function toggleTheme() {
   });
 }
 
+// ---- Modo desafío ----
+
+function makeGarbageRow() {
+  const row = new Array(COLS).fill(0);
+  const gapCount = 1 + Math.floor(Math.random() * 2); // 1-2 huecos
+  const gaps = new Set();
+  while (gaps.size < gapCount) gaps.add(Math.floor(Math.random() * COLS));
+  const type = 1 + Math.floor(Math.random() * PIECE_COUNT);
+  for (let c = 0; c < COLS; c++) {
+    if (!gaps.has(c)) row[c] = type;
+  }
+  return row;
+}
+
+function buildPresetRows(n) {
+  const b = createBoard();
+  for (let i = 0; i < n; i++) {
+    b[ROWS - 1 - i] = makeGarbageRow();
+  }
+  return b;
+}
+
+function pushGarbage() {
+  const overflow = board[0].some(v => v !== 0);
+  board.shift();
+  board.push(makeGarbageRow());
+  if (overflow || collide(current.shape, current.x, current.y)) {
+    finishChallenge(false);
+  }
+}
+
+function updateChallenge(dt) {
+  if (!challenge) return;
+  elapsed += dt;
+  updateChallengeTimerText();
+
+  if (challenge.timeLimit && elapsed >= challenge.timeLimit) {
+    finishChallenge(false);
+    return;
+  }
+  if (challenge.goalTime && elapsed >= challenge.goalTime) {
+    finishChallenge(true);
+    return;
+  }
+  if (challenge.garbageEvery) {
+    garbageAccum += dt;
+    if (garbageAccum >= challenge.garbageEvery) {
+      garbageAccum -= challenge.garbageEvery;
+      pushGarbage();
+    }
+  }
+}
+
+function finishChallenge(won) {
+  gameOver = true;
+  cancelAnimationFrame(animId);
+  if (won) saveProgress(challenge.id, { completed: true, lines, elapsed });
+  overlayTitle.textContent = won ? '¡DESAFÍO SUPERADO!' : 'DESAFÍO FALLIDO';
+  overlayScore.textContent = won
+    ? `Líneas: ${lines} · Tiempo: ${formatTime(elapsed)}`
+    : `Puntuación: ${score.toLocaleString()}`;
+  const idx = CHALLENGES.indexOf(challenge);
+  nextBtn.classList.toggle('hidden', !(won && idx >= 0 && idx < CHALLENGES.length - 1));
+  overlay.classList.remove('hidden');
+}
+
+function loadProgress() {
+  try {
+    return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProgress(id, stat) {
+  const progress = loadProgress();
+  progress[id] = stat;
+  try {
+    localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress));
+  } catch {}
+}
+
+function renderMenu() {
+  const progress = loadProgress();
+  challengeListEl.innerHTML = '';
+  CHALLENGES.forEach((ch, i) => {
+    const prev = CHALLENGES[i - 1];
+    const locked = prev && !progress[prev.id]?.completed;
+    const done = !!progress[ch.id]?.completed;
+    const card = document.createElement('div');
+    card.className = 'challenge-card' + (locked ? ' locked' : '') + (done ? ' done' : '');
+    const best = done && progress[ch.id].lines != null
+      ? `<span class="card-best">Mejor: ${progress[ch.id].lines} líneas en ${formatTime(progress[ch.id].elapsed)}</span>`
+      : '';
+    card.innerHTML = `
+      <span class="card-title">${i + 1}. ${ch.title}${done ? ' ✓' : ''}</span>
+      <span class="card-goal">${ch.goalText}</span>
+      ${best}
+    `;
+    if (!locked) card.addEventListener('click', () => init(ch));
+    challengeListEl.appendChild(card);
+  });
+}
+
+function openMenu() {
+  cancelAnimationFrame(animId);
+  overlay.classList.add('hidden');
+  renderMenu();
+  menuEl.classList.remove('hidden');
+}
+
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY);
   applyTheme(saved === 'light');
@@ -415,6 +626,7 @@ function initTheme() {
 }
 
 document.addEventListener('keydown', e => {
+  if (!menuEl.classList.contains('hidden')) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -439,7 +651,13 @@ document.addEventListener('keydown', e => {
   updateHUD();
 });
 
-restartBtn.addEventListener('click', init);
+restartBtn.addEventListener('click', () => init(challenge));
+nextBtn.addEventListener('click', () => {
+  const idx = CHALLENGES.indexOf(challenge);
+  init(CHALLENGES[idx + 1]);
+});
+menuBtn.addEventListener('click', openMenu);
+classicBtn.addEventListener('click', () => init());
 
 initTheme();
-init();
+openMenu();
