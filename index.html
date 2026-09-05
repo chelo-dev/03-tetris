@@ -75,6 +75,30 @@
       </div>
     </div>
 
+    <div id="pause-menu" class="overlay hidden">
+      <div class="overlay-box pause-box">
+        <p class="pause-title">PAUSA</p>
+        <div class="pause-actions">
+          <button id="resume-btn">Reanudar</button>
+          <button id="pause-restart-btn">Reiniciar</button>
+          <button id="controls-toggle-btn">Ver controles</button>
+        </div>
+        <div id="pause-controls" class="pause-controls hidden">
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+        </div>
+        <label class="pause-level-select">
+          <span class="label">NIVEL INICIAL</span>
+          <select id="start-level-select"></select>
+        </label>
+      </div>
+    </div>
+
     <div id="menu" class="menu hidden">
       <div class="menu-box">
         <h2>MODO DESAFÍO</h2>

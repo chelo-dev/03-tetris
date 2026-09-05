@@ -75,6 +75,8 @@ const CHALLENGES = [
   },
 ];
 const PROGRESS_KEY = 'tetris-challenges';
+const START_LEVEL_KEY = 'tetris-start-level';
+const MAX_START_LEVEL = 10;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -98,10 +100,16 @@ const challengeListEl = document.getElementById('challenge-list');
 const classicBtn = document.getElementById('classic-btn');
 const themeSwitch = document.getElementById('theme-switch');
 const curtain = document.getElementById('curtain');
+const pauseMenuEl = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const controlsToggleBtn = document.getElementById('controls-toggle-btn');
+const pauseControlsEl = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level-select');
 
 const THEME_KEY = 'tetris-theme';
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, startLevel, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let combo, b2b, lastMoveRotation, popups;
 let challenge, elapsed, garbageAccum, revealUntil;
 let gridColor = '#22222e';
@@ -244,7 +252,7 @@ function applyScore(cleared, tspin) {
 
   score += Math.round(base * level);
   lines += cleared;
-  level = Math.floor(lines / 10) + 1;
+  level = startLevel + Math.floor(lines / 10);
   dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   updateHUD();
 
@@ -423,16 +431,24 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
-    overlay.classList.add('hidden');
+    closePauseMenu();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    nextBtn.classList.add('hidden');
-    overlay.classList.remove('hidden');
+    openPauseMenu();
   }
+}
+
+function openPauseMenu() {
+  pauseControlsEl.classList.add('hidden');
+  controlsToggleBtn.textContent = 'Ver controles';
+  startLevelSelect.value = loadStartLevel();
+  pauseMenuEl.classList.remove('hidden');
+}
+
+function closePauseMenu() {
+  pauseMenuEl.classList.add('hidden');
 }
 
 function loop(ts) {
@@ -458,15 +474,16 @@ function loop(ts) {
   animId = requestAnimationFrame(loop);
 }
 
-function init(ch = null) {
+function init(ch = null, sLevel = loadStartLevel()) {
   challenge = ch;
   board = challenge && challenge.presetRows ? buildPresetRows(challenge.presetRows) : createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = sLevel;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   combo = 0;
   b2b = false;
@@ -481,6 +498,7 @@ function init(ch = null) {
   updateHUD();
   overlay.classList.add('hidden');
   menuEl.classList.add('hidden');
+  closePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -619,6 +637,31 @@ function openMenu() {
   menuEl.classList.remove('hidden');
 }
 
+function loadStartLevel() {
+  const saved = parseInt(localStorage.getItem(START_LEVEL_KEY), 10);
+  if (Number.isNaN(saved)) return 1;
+  return Math.min(MAX_START_LEVEL, Math.max(1, saved));
+}
+
+function saveStartLevel(v) {
+  try {
+    localStorage.setItem(START_LEVEL_KEY, String(v));
+  } catch {}
+}
+
+function initStartLevelSelect() {
+  for (let i = 1; i <= MAX_START_LEVEL; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    startLevelSelect.appendChild(opt);
+  }
+  startLevelSelect.value = loadStartLevel();
+  startLevelSelect.addEventListener('change', () => {
+    saveStartLevel(parseInt(startLevelSelect.value, 10));
+  });
+}
+
 function initTheme() {
   const saved = localStorage.getItem(THEME_KEY);
   applyTheme(saved === 'light');
@@ -627,7 +670,7 @@ function initTheme() {
 
 document.addEventListener('keydown', e => {
   if (!menuEl.classList.contains('hidden')) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -659,5 +702,13 @@ nextBtn.addEventListener('click', () => {
 menuBtn.addEventListener('click', openMenu);
 classicBtn.addEventListener('click', () => init());
 
+resumeBtn.addEventListener('click', () => { if (paused) togglePause(); });
+pauseRestartBtn.addEventListener('click', () => init(challenge, loadStartLevel()));
+controlsToggleBtn.addEventListener('click', () => {
+  const hidden = pauseControlsEl.classList.toggle('hidden');
+  controlsToggleBtn.textContent = hidden ? 'Ver controles' : 'Ocultar controles';
+});
+
 initTheme();
+initStartLevelSelect();
 openMenu();
