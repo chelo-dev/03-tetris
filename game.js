@@ -469,7 +469,7 @@ function init(ch = null) {
   board = challenge && challenge.presetRows ? buildPresetRows(challenge.presetRows) : createBoard();
   score = 0;
   lines = 0;
-  startLevel = loadStartLevel();
+  startLevel = challenge ? 1 : loadStartLevel();
   level = startLevel;
   paused = false;
   gameOver = false;
@@ -652,7 +652,8 @@ document.addEventListener('keydown', e => {
   if (!menuEl.classList.contains('hidden')) return;
   if (!pauseMenuEl.classList.contains('hidden')) {
     if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
-    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+    const isFormField = e.target instanceof HTMLSelectElement || e.target instanceof HTMLButtonElement;
+    if (!isFormField && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
     return;
   }
   if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
