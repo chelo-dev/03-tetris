@@ -403,6 +403,168 @@ kbd {
   border-color: var(--accent);
 }
 
+/* ---- Récords ---- */
+.records-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 280px;
+}
+
+.records-list {
+  list-style: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.record-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.record-row.highlight {
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.record-rank {
+  width: 20px;
+  color: var(--label-color);
+}
+
+.record-row.highlight .record-rank {
+  color: var(--bg);
+}
+
+.record-name {
+  flex: 1;
+  text-align: left;
+  letter-spacing: 1px;
+}
+
+.record-score {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.record-row.highlight .record-score {
+  color: var(--bg);
+}
+
+.record-empty {
+  font-size: 12px;
+  color: var(--controls-color);
+  text-align: center;
+  padding: 8px 0;
+}
+
+.records-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--controls-color);
+}
+
+.records-stats b {
+  color: var(--accent);
+}
+
+#reset-records-btn {
+  background: transparent;
+  color: var(--controls-color);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+#reset-records-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+#reset-records-btn.armed {
+  color: #e57373;
+  border-color: #e57373;
+}
+
+/* ---- Entrada de nombre (overlay) ---- */
+.name-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.new-record-label {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: var(--accent);
+}
+
+.name-input {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  background: var(--board-bg);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  color: var(--text);
+  width: 160px;
+}
+
+.name-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#save-name-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: opacity 0.15s;
+}
+
+#save-name-btn:hover {
+  opacity: 0.85;
+}
+
+.overlay-records {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 220px;
+}
+
+.overlay-records.hidden,
+.name-entry.hidden {
+  display: none;
+}
+
 #classic-btn {
   background: transparent;
   color: var(--controls-color);

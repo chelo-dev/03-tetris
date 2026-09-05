@@ -75,6 +75,8 @@ const CHALLENGES = [
   },
 ];
 const PROGRESS_KEY = 'tetris-challenges';
+const RECORDS_KEY = 'tetris-records';
+const MAX_RECORDS = 5;
 
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
@@ -98,14 +100,26 @@ const challengeListEl = document.getElementById('challenge-list');
 const classicBtn = document.getElementById('classic-btn');
 const themeSwitch = document.getElementById('theme-switch');
 const curtain = document.getElementById('curtain');
+const nameEntry = document.getElementById('name-entry');
+const nameInput = document.getElementById('name-input');
+const saveNameBtn = document.getElementById('save-name-btn');
+const overlayRecords = document.getElementById('overlay-records');
+const overlayRecordsList = document.getElementById('overlay-records-list');
+const recordsListEl = document.getElementById('records-list');
+const recordComboEl = document.getElementById('record-combo');
+const recordLinesEl = document.getElementById('record-lines');
+const resetRecordsBtn = document.getElementById('reset-records-btn');
 
 const THEME_KEY = 'tetris-theme';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
-let combo, b2b, lastMoveRotation, popups;
+let combo, b2b, lastMoveRotation, popups, maxCombo;
 let challenge, elapsed, garbageAccum, revealUntil;
 let gridColor = '#22222e';
 let accentColor = '#7aa2f7';
+let pendingScore = null;
+let lastHighlightId = null;
+let resetArmTimeout = null;
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -228,6 +242,7 @@ function applyScore(cleared, tspin) {
   }
 
   combo++;
+  if (combo > maxCombo) maxCombo = combo;
   if (combo >= 2) {
     base *= combo;
     pushPopup(`COMBO x${combo}`);
@@ -416,6 +431,22 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   nextBtn.classList.add('hidden');
+
+  updateGlobalStats(lines, maxCombo);
+
+  const qualifies = score > 0 && qualifiesForTop(score);
+  if (qualifies) {
+    pendingScore = { score, lines, combo: maxCombo };
+    nameInput.value = '';
+    nameEntry.classList.remove('hidden');
+    setTimeout(() => nameInput.focus(), 50);
+  } else {
+    pendingScore = null;
+    nameEntry.classList.add('hidden');
+  }
+
+  overlayRecords.classList.remove('hidden');
+  renderRecordsInto(overlayRecordsList);
   overlay.classList.remove('hidden');
 }
 
@@ -469,6 +500,7 @@ function init(ch = null) {
   dropInterval = 1000;
   dropAccum = 0;
   combo = 0;
+  maxCombo = 0;
   b2b = false;
   lastMoveRotation = false;
   popups = [];
@@ -481,6 +513,9 @@ function init(ch = null) {
   updateHUD();
   overlay.classList.add('hidden');
   menuEl.classList.add('hidden');
+  nameEntry.classList.add('hidden');
+  overlayRecords.classList.add('hidden');
+  pendingScore = null;
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -506,6 +541,95 @@ function toggleTheme() {
       themeSwitch.disabled = false;
     });
   });
+}
+
+// ---- Tabla de récords ----
+
+function loadRecords() {
+  try {
+    const data = JSON.parse(localStorage.getItem(RECORDS_KEY));
+    return {
+      scores: Array.isArray(data?.scores) ? data.scores : [],
+      bestCombo: data?.bestCombo || 0,
+      maxLines: data?.maxLines || 0,
+    };
+  } catch {
+    return { scores: [], bestCombo: 0, maxLines: 0 };
+  }
+}
+
+function saveRecords(records) {
+  try {
+    localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+  } catch {}
+}
+
+function qualifiesForTop(scoreValue) {
+  const records = loadRecords();
+  return records.scores.length < MAX_RECORDS || scoreValue > records.scores[records.scores.length - 1].score;
+}
+
+function updateGlobalStats(linesValue, comboValue) {
+  const records = loadRecords();
+  if (comboValue > records.bestCombo || linesValue > records.maxLines) {
+    records.bestCombo = Math.max(records.bestCombo, comboValue);
+    records.maxLines = Math.max(records.maxLines, linesValue);
+    saveRecords(records);
+  }
+}
+
+function addRecordScore(name, scoreValue, linesValue, comboValue) {
+  const records = loadRecords();
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  records.scores.push({ id, name, score: scoreValue, lines: linesValue, combo: comboValue });
+  records.scores.sort((a, b) => b.score - a.score);
+  records.scores = records.scores.slice(0, MAX_RECORDS);
+  records.bestCombo = Math.max(records.bestCombo, comboValue);
+  records.maxLines = Math.max(records.maxLines, linesValue);
+  saveRecords(records);
+  lastHighlightId = records.scores.some(r => r.id === id) ? id : null;
+}
+
+function renderRecordsInto(listEl) {
+  const records = loadRecords();
+  listEl.innerHTML = '';
+  if (records.scores.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'record-empty';
+    li.textContent = 'Sin récords todavía';
+    listEl.appendChild(li);
+  } else {
+    records.scores.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.className = 'record-row' + (r.id && r.id === lastHighlightId ? ' highlight' : '');
+      const rank = document.createElement('span');
+      rank.className = 'record-rank';
+      rank.textContent = `${i + 1}.`;
+      const name = document.createElement('span');
+      name.className = 'record-name';
+      name.textContent = r.name;
+      const sc = document.createElement('span');
+      sc.className = 'record-score';
+      sc.textContent = r.score.toLocaleString();
+      li.append(rank, name, sc);
+      listEl.appendChild(li);
+    });
+  }
+  recordComboEl.textContent = records.bestCombo >= 2 ? `x${records.bestCombo}` : '–';
+  recordLinesEl.textContent = records.maxLines || '–';
+}
+
+function renderRecords() {
+  renderRecordsInto(recordsListEl);
+}
+
+function saveNameEntry() {
+  if (!pendingScore) return;
+  const name = (nameInput.value || '').trim().toUpperCase().slice(0, 10) || 'AAA';
+  addRecordScore(name, pendingScore.score, pendingScore.lines, pendingScore.combo);
+  pendingScore = null;
+  nameEntry.classList.add('hidden');
+  renderRecordsInto(overlayRecordsList);
 }
 
 // ---- Modo desafío ----
@@ -616,6 +740,7 @@ function openMenu() {
   cancelAnimationFrame(animId);
   overlay.classList.add('hidden');
   renderMenu();
+  renderRecords();
   menuEl.classList.remove('hidden');
 }
 
@@ -658,6 +783,34 @@ nextBtn.addEventListener('click', () => {
 });
 menuBtn.addEventListener('click', openMenu);
 classicBtn.addEventListener('click', () => init());
+
+saveNameBtn.addEventListener('click', saveNameEntry);
+nameInput.addEventListener('keydown', e => {
+  if (e.code === 'Enter') {
+    e.preventDefault();
+    e.stopPropagation();
+    saveNameEntry();
+  }
+});
+
+resetRecordsBtn.addEventListener('click', () => {
+  if (!resetRecordsBtn.classList.contains('armed')) {
+    resetRecordsBtn.classList.add('armed');
+    resetRecordsBtn.textContent = '¿Seguro? Confirmar';
+    clearTimeout(resetArmTimeout);
+    resetArmTimeout = setTimeout(() => {
+      resetRecordsBtn.classList.remove('armed');
+      resetRecordsBtn.textContent = 'Resetear récords';
+    }, 3000);
+    return;
+  }
+  clearTimeout(resetArmTimeout);
+  resetRecordsBtn.classList.remove('armed');
+  resetRecordsBtn.textContent = 'Resetear récords';
+  saveRecords({ scores: [], bestCombo: 0, maxLines: 0 });
+  lastHighlightId = null;
+  renderRecords();
+});
 
 initTheme();
 openMenu();
