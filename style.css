@@ -38,6 +38,28 @@ body.light {
   --toggle-thumb-bg: #3b5bdb;
 }
 
+/* ---- Skins ---- */
+body.skin-neon {
+  --board-bg: #000000;
+  --board-border: #0ff3;
+  --grid-color: #0a0a0a;
+  --accent: #39ff14;
+}
+
+body.skin-pastel {
+  --board-bg: #fdf6f0;
+  --board-border: #f3d9e6;
+  --grid-color: #f0e4ea;
+  --accent: #f7a1c4;
+}
+
+body.skin-pixel {
+  --board-bg: #101018;
+  --board-border: #4a4a4a;
+  --grid-color: #2a2a2a;
+  --accent: #ffcc00;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -63,6 +85,25 @@ body {
   color: var(--accent);
   text-shadow: 0 0 20px rgba(122, 162, 247, 0.5);
   margin-bottom: 16px;
+}
+
+/* ---- Selector de skin ---- */
+.skin-picker {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+}
+
+.skin-picker select {
+  background: var(--kbd-bg);
+  color: var(--text);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
 }
 
 /* ---- Toggle tema ---- */
