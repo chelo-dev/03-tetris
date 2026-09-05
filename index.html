@@ -67,6 +67,14 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="score-form" class="score-form hidden">
+          <label for="score-name-input">¡Top 5! Ingresa tu nombre:</label>
+          <div class="score-form-row">
+            <input type="text" id="score-name-input" maxlength="12" placeholder="???" />
+            <button id="save-score-btn">Guardar</button>
+          </div>
+        </div>
+        <div id="scoreboard-gameover" class="scoreboard"></div>
         <div class="overlay-actions">
           <button id="restart-btn">Reintentar</button>
           <button id="next-btn" class="hidden">Siguiente</button>
@@ -80,6 +88,8 @@
         <h2>MODO DESAFÍO</h2>
         <div id="challenge-list" class="challenge-list"></div>
         <button id="classic-btn">Modo clásico</button>
+        <div id="scoreboard-menu" class="scoreboard"></div>
+        <button id="reset-scores-btn">Resetear records</button>
       </div>
     </div>
   </div>
