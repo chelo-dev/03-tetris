@@ -98,10 +98,18 @@ const challengeListEl = document.getElementById('challenge-list');
 const classicBtn = document.getElementById('classic-btn');
 const themeSwitch = document.getElementById('theme-switch');
 const curtain = document.getElementById('curtain');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const controlsToggleBtn = document.getElementById('controls-toggle-btn');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level-select');
 
 const THEME_KEY = 'tetris-theme';
+const START_LEVEL_KEY = 'tetris-start-level';
+const MAX_START_LEVEL = 10;
 
-let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let board, current, next, score, lines, level, startLevel, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 let combo, b2b, lastMoveRotation, popups;
 let challenge, elapsed, garbageAccum, revealUntil;
 let gridColor = '#22222e';
@@ -244,8 +252,8 @@ function applyScore(cleared, tspin) {
 
   score += Math.round(base * level);
   lines += cleared;
-  level = Math.floor(lines / 10) + 1;
-  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+  level = startLevel + Math.floor(lines / 10);
+  dropInterval = dropIntervalForLevel(level);
   updateHUD();
 
   if (challenge && challenge.goalLines && lines >= challenge.goalLines) {
@@ -419,20 +427,51 @@ function endGame() {
   overlay.classList.remove('hidden');
 }
 
+function dropIntervalForLevel(lvl) {
+  return Math.max(100, 1000 - (lvl - 1) * 90);
+}
+
+function loadStartLevel() {
+  const v = parseInt(localStorage.getItem(START_LEVEL_KEY), 10);
+  return v >= 1 && v <= MAX_START_LEVEL ? v : 1;
+}
+
+function initStartLevelSelect() {
+  for (let i = 1; i <= MAX_START_LEVEL; i++) {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = i;
+    startLevelSelect.appendChild(opt);
+  }
+  startLevelSelect.value = loadStartLevel();
+  startLevelSelect.addEventListener('change', () => {
+    localStorage.setItem(START_LEVEL_KEY, startLevelSelect.value);
+  });
+}
+
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
-    overlay.classList.add('hidden');
-    lastTime = performance.now();
-    loop(lastTime);
+    resumeGame();
   } else {
-    cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    nextBtn.classList.add('hidden');
-    overlay.classList.remove('hidden');
+    pauseGame();
   }
+}
+
+function pauseGame() {
+  cancelAnimationFrame(animId);
+  pauseControls.classList.add('hidden');
+  controlsToggleBtn.textContent = 'Ver controles';
+  startLevelSelect.value = loadStartLevel();
+  startLevelSelect.disabled = !!challenge;
+  pauseMenu.classList.remove('hidden');
+}
+
+function resumeGame() {
+  pauseMenu.classList.add('hidden');
+  lastTime = performance.now();
+  loop(lastTime);
 }
 
 function loop(ts) {
@@ -463,10 +502,11 @@ function init(ch = null) {
   board = challenge && challenge.presetRows ? buildPresetRows(challenge.presetRows) : createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = challenge ? 1 : loadStartLevel();
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = dropIntervalForLevel(level);
   dropAccum = 0;
   combo = 0;
   b2b = false;
@@ -481,6 +521,7 @@ function init(ch = null) {
   updateHUD();
   overlay.classList.add('hidden');
   menuEl.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -627,7 +668,7 @@ function initTheme() {
 
 document.addEventListener('keydown', e => {
   if (!menuEl.classList.contains('hidden')) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -658,6 +699,13 @@ nextBtn.addEventListener('click', () => {
 });
 menuBtn.addEventListener('click', openMenu);
 classicBtn.addEventListener('click', () => init());
+resumeBtn.addEventListener('click', togglePause);
+pauseRestartBtn.addEventListener('click', () => init(challenge));
+controlsToggleBtn.addEventListener('click', () => {
+  const hidden = pauseControls.classList.toggle('hidden');
+  controlsToggleBtn.textContent = hidden ? 'Ver controles' : 'Ocultar controles';
+});
 
 initTheme();
+initStartLevelSelect();
 openMenu();

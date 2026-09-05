@@ -82,6 +82,31 @@
         <button id="classic-btn">Modo clásico</button>
       </div>
     </div>
+
+    <div id="pause-menu" class="menu hidden">
+      <div class="menu-box">
+        <h2>PAUSA</h2>
+        <div class="overlay-actions">
+          <button id="resume-btn">Reanudar</button>
+          <button id="pause-restart-btn">Reiniciar</button>
+          <button id="controls-toggle-btn">Ver controles</button>
+        </div>
+        <div id="pause-controls" class="controls hidden">
+          <span class="label">CONTROLS</span>
+          <ul>
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+        </div>
+        <label class="start-level-label" for="start-level-select">
+          NIVEL INICIAL
+          <select id="start-level-select"></select>
+        </label>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>

@@ -403,6 +403,42 @@ kbd {
   border-color: var(--accent);
 }
 
+/* ---- Menú de pausa ---- */
+#pause-controls.hidden {
+  display: none;
+}
+
+#pause-controls {
+  width: 100%;
+}
+
+.start-level-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--label-color);
+  font-weight: 600;
+  width: 100%;
+}
+
+#start-level-select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+#start-level-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 #classic-btn {
   background: transparent;
   color: var(--controls-color);
