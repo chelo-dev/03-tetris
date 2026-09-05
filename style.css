@@ -418,3 +418,156 @@ kbd {
   color: var(--text);
   border-color: var(--accent);
 }
+
+/* ---- Tabla de récords ---- */
+.highscores {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+}
+
+.highscores h3 {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: var(--label-color);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.highscore-list {
+  list-style: none;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.highscore-entry {
+  display: grid;
+  grid-template-columns: 20px 1fr auto;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--board-bg);
+  border: 1px solid transparent;
+}
+
+.highscore-entry.current {
+  border-color: var(--accent);
+  box-shadow: 0 0 10px rgba(122, 162, 247, 0.35);
+}
+
+.hs-rank {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: var(--label-color);
+}
+
+.hs-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+}
+
+.hs-score {
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.hs-meta {
+  grid-column: 2 / 4;
+  font-size: 11px;
+  color: var(--controls-color);
+  text-align: left;
+}
+
+.highscore-empty {
+  font-size: 12px;
+  color: var(--controls-color);
+  text-align: center;
+  padding: 8px;
+}
+
+.highscore-summary {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--label-color);
+  text-align: center;
+}
+
+.reset-scores-btn {
+  background: transparent;
+  color: var(--controls-color);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.reset-scores-btn:hover {
+  color: #e57373;
+  border-color: #e57373;
+}
+
+.highscore-entry-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.highscore-entry-form.hidden {
+  display: none;
+}
+
+.highscore-entry-label {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.highscore-entry-row {
+  display: flex;
+  gap: 8px;
+}
+
+#player-name {
+  background: var(--board-bg);
+  border: 1px solid var(--board-border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--text);
+  font-size: 13px;
+  width: 140px;
+  text-transform: uppercase;
+}
+
+#player-name:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+#save-score-btn {
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+#save-score-btn:hover {
+  opacity: 0.85;
+}

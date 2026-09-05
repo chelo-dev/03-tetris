@@ -67,6 +67,17 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <div id="highscore-entry" class="highscore-entry-form hidden">
+          <p class="highscore-entry-label">¡Nuevo récord! Ingresa tu nombre:</p>
+          <div class="highscore-entry-row">
+            <input type="text" id="player-name" maxlength="12" placeholder="JUGADOR" autocomplete="off" />
+            <button id="save-score-btn">Guardar</button>
+          </div>
+        </div>
+        <div class="highscores">
+          <h3>Mejores puntuaciones</h3>
+          <ol class="highscore-list" id="overlay-highscore-list"></ol>
+        </div>
         <div class="overlay-actions">
           <button id="restart-btn">Reintentar</button>
           <button id="next-btn" class="hidden">Siguiente</button>
@@ -80,6 +91,11 @@
         <h2>MODO DESAFÍO</h2>
         <div id="challenge-list" class="challenge-list"></div>
         <button id="classic-btn">Modo clásico</button>
+        <div class="highscores">
+          <h3>Mejores puntuaciones</h3>
+          <ol class="highscore-list" id="menu-highscore-list"></ol>
+          <button id="reset-scores-btn" class="reset-scores-btn">Resetear récords</button>
+        </div>
       </div>
     </div>
   </div>
